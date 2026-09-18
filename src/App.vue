@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import {computed, onMounted, reactive, ref} from 'vue'
+import {computed, onMounted, reactive, ref, watch} from 'vue'
 
 type MODE_T = "TIMER" | "SCORE" | "MATCH";
 type STATE_T = "IDLE" | "COUNTDOWN" | "RUNNING"
@@ -88,7 +88,7 @@ const defaultElements = (): SCOREELEMENT[] => [
   {name: "Pin Lower", pts: 10, count: 0},
   {name: "Pin Upper", pts: 20, count: 0},
   {name: "Pin", pts: 30, count: 0},
-  {name: "MakeX", pts: 50, count: 0},
+  {name: "MakeX", pts: 30, count: 0},
 ]
 
 const mode = ref("TIMER" as MODE_T);
@@ -106,6 +106,11 @@ const blueTeam2Name = ref("");
 const blueElements = ref<SCOREELEMENT[]>(defaultElements());
 const bluePenalty = ref(0);
 
+const penaltyPoints = 20;
+const penaltyStopThreshold = 3;
+
+const clampPenalty = (value: number) => Math.max(0, Math.min(value, penaltyStopThreshold));
+
 const history = ref<IHISTORYENTRY[]>([]);
 const showHistory = ref(false);
 
@@ -121,8 +126,18 @@ const matchForm = reactive({
 const showDeleteModal = ref(false);
 const deleteIndex = ref<number | null>(null);
 
-const redScore = computed(() => redElements.value.reduce((sum, el) => sum + el.pts * el.count, 0) - (redPenalty.value * 50));
-const blueScore = computed(() => blueElements.value.reduce((sum, el) => sum + el.pts * el.count, 0) - (bluePenalty.value * 50));
+const penaltyPoints = 20;
+const redPenaltyTotal = computed(() => clampPenalty(redPenalty.value) * penaltyPoints);
+const bluePenaltyTotal = computed(() => clampPenalty(bluePenalty.value) * penaltyPoints);
+const redScore = computed(() => redElements.value.reduce((sum, el) => sum + el.pts * el.count, 0) - redPenaltyTotal.value);
+const blueScore = computed(() => blueElements.value.reduce((sum, el) => sum + el.pts * el.count, 0) - bluePenaltyTotal.value);
+
+watch([redPenalty, bluePenalty], () => {
+  if (redPenalty.value >= penaltyStopThreshold || bluePenalty.value >= penaltyStopThreshold) {
+    clearTimer();
+    state.value = "IDLE";
+  }
+});
 
 const redTeamMatch = reactive<Array<Pick<MatchVersus, "redTeam"> | {}>>([]);
 const blueTeamMatch = reactive<Array<Pick<MatchVersus, "blueTeam"> | {}>>([]);
@@ -469,7 +484,7 @@ onMounted(() => {
                   <!-- Penalty Row -->
                   <div class="grid grid-cols-4 gap-2 px-4 py-2 border-t border-white/20 items-center bg-white/10">
                     <div class="text-sm font-bold text-yellow-200">Penalty</div>
-                    <div class="text-sm font-black text-yellow-200 text-center">-50</div>
+                    <div class="text-sm font-black text-yellow-200 text-center">-20</div>
                     <div class="flex justify-center">
                       <input
                           type="number"
@@ -479,7 +494,7 @@ onMounted(() => {
                       />
                     </div>
                     <div class="text-sm font-black text-yellow-200 text-center tabular-nums">{{
-                        -(redPenalty * 50)
+                        -(redPenaltyTotal)
                       }}
                     </div>
                   </div>
@@ -552,7 +567,7 @@ onMounted(() => {
                   <!-- Penalty Row -->
                   <div class="grid grid-cols-4 gap-2 px-4 py-2 border-t border-white/20 items-center bg-white/10">
                     <div class="text-sm font-bold text-yellow-200">Penalty</div>
-                    <div class="text-sm font-black text-yellow-200 text-center">-50</div>
+                    <div class="text-sm font-black text-yellow-200 text-center">-20</div>
                     <div class="flex justify-center">
                       <input
                           type="number"
@@ -562,7 +577,7 @@ onMounted(() => {
                       />
                     </div>
                     <div class="text-sm font-black text-yellow-200 text-center tabular-nums">{{
-                        -(bluePenalty * 50)
+                        -(bluePenaltyTotal)
                       }}
                     </div>
                   </div>
