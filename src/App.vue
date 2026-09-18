@@ -106,7 +106,6 @@ const blueTeam2Name = ref("");
 const blueElements = ref<SCOREELEMENT[]>(defaultElements());
 const bluePenalty = ref(0);
 
-const penaltyPoints = 20;
 const penaltyStopThreshold = 3;
 
 const clampPenalty = (value: number) => Math.max(0, Math.min(value, penaltyStopThreshold));
